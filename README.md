@@ -34,7 +34,7 @@
 
   <br>
 
-  <img src="images/dashboard-preview.png" alt="Credit Usage & Chargebacks Dashboard Preview" width="100%" />
+  <img src="images/dashboard-preview.gif" alt="Credit Usage & Chargebacks Dashboard Preview" width="100%" />
 
 </details>
 
@@ -85,6 +85,9 @@ Who are the heavy users? Who is idle-heavy — holding capacity while inactive �
 
 This report is powered by **two CSV exports** that join on the user principal name. No database connection is required — the report reads both files through Power Query parameters.
 
+> **Where to get Export 1 (Copilot credit consumption):**
+> **Microsoft 365 Admin Center → Copilot → Cost management → Consumption tab → Export CSV.**
+
 <details>
 <summary><strong>Detailed field requirements</strong></summary>
 
@@ -119,7 +122,8 @@ This report is powered by **two CSV exports** that join on the user principal na
 ### Quick Reference
 
 1. **Produce the credit consumption export**
-   - Pull per-user Copilot credit consumption (Cowork, WorkIQ, Other) plus each user's Last Activity Date.
+   - In the **Microsoft 365 Admin Center**, go to **Copilot → Cost management → Consumption** tab and click **Export CSV**.
+   - This gives you per-user Copilot credit consumption (Cowork, WorkIQ, Other) plus each user's Last Activity Date.
    - Save as CSV with the exact column names listed above.
 
 2. **Produce the organization directory export**
