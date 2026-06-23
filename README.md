@@ -87,6 +87,9 @@ This report is powered by **two CSV exports** that join on the user principal na
 
 > **Where to get Export 1 (Copilot credit consumption):**
 > **Microsoft 365 Admin Center → Copilot → Cost management → Consumption tab → Export CSV.**
+>
+> **Where to get Export 2 (Microsoft Entra org directory):**
+> **Microsoft Entra admin center → Identity → Users → All users → Download users** (or Microsoft Graph `GET /users`).
 
 <details>
 <summary><strong>Detailed field requirements</strong></summary>
@@ -103,17 +106,16 @@ This report is powered by **two CSV exports** that join on the user principal na
 | `Other Credits` | Credits consumed in all other surfaces |
 | `Last Activity Date` | Date of the user's most recent Copilot activity |
 
-**Export 2 — Organization directory** (one row per user):
+**Export 2 — Microsoft Entra org directory** (one row per user):
 
 | Field | Description |
 |-------|-------------|
-| `UserPrincipalName` | The user's work email — the join key |
-| `DisplayName` | The user's display name |
-| `Department` | Drives department attribution, slicers, and RLS |
-| `CostCenter` | Cost center for chargeback roll-up |
-| `Manager` | The user's manager |
-| `Country` | Country, for geographic slicing |
-| `JobFamily` | Job family / role grouping |
+| `userPrincipalName` | The user's work email — the join key |
+| `displayName` | The user's display name |
+| `department` | Drives department attribution, slicers, and RLS |
+| `jobTitle` | Job title / role grouping (persona analysis) |
+| `usageLocation` | Country code, for geographic slicing |
+| `manager` | The user's manager |
 
 > **Do not remove or rename these columns.** Missing a column will cause blank visuals in Power BI with no error. Every user in the credit export should have a matching row in the directory export, or those credits will not be attributed to a department.
 
@@ -126,13 +128,14 @@ This report is powered by **two CSV exports** that join on the user principal na
    - This gives you per-user Copilot credit consumption (Cowork, WorkIQ, Other) plus each user's Last Activity Date.
    - Save as CSV with the exact column names listed above.
 
-2. **Produce the organization directory export**
-   - Export the directory mapping each `UserPrincipalName` to `Department`, `CostCenter`, `Manager`, `Country`, and `JobFamily`.
+2. **Produce the Microsoft Entra org directory export**
+   - In the **Microsoft Entra admin center**, go to **Identity → Users → All users → Download users** (or use Microsoft Graph `GET /users`).
+   - This maps each `userPrincipalName` to `displayName`, `department`, `jobTitle`, `usageLocation`, and `manager`.
    - Save as CSV with the exact column names listed above.
 
 3. **Open the template in Power BI Desktop**
    - Open the `.pbit` template file.
-   - When prompted for parameters, set **`CreditCsvPath`** to the credit consumption CSV and **`OrgCsvPath`** to the organization directory CSV.
+   - When prompted for parameters, set **`CreditCsvPath`** to the credit consumption CSV and **`EntraCsvPath`** to the Microsoft Entra org directory CSV.
 
 4. **Refresh and verify**
    - Click **Refresh**.
@@ -160,11 +163,11 @@ This report is powered by **two CSV exports** that join on the user principal na
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Blank visuals | Missing required column(s) | Re-export with the full column set |
-| Missing slicers/labels | No `Department` / `Country` in directory export | Add the attributes and re-export |
+| Missing slicers/labels | No `department` / `usageLocation` in Entra export | Add the attributes and re-export |
 | Credits not attributed to a department | UPNs in the credit export have no matching directory row | Reconcile the two exports on user principal name |
 | Capacity alerts look wrong | Credits Budget / User not set | Set the per-user allocation input |
 | Load error | CSV open in Excel | Close the file and retry |
-| Wrong file loaded | Parameter points to the wrong path | Re-check `CreditCsvPath` and `OrgCsvPath` |
+| Wrong file loaded | Parameter points to the wrong path | Re-check `CreditCsvPath` and `EntraCsvPath` |
 
 </details>
 
@@ -271,7 +274,7 @@ Publish as normal: **File → Publish → Publish to Power BI** and select your 
 
 <br>
 
-The report's two source paths are exposed as Power Query parameters — `CreditCsvPath` and `OrgCsvPath` — so swapping in a fresh extract is a parameter change and a refresh, with no model edits. Department attribution, capacity alerts, and the heavy / idle-heavy cohorts all derive from the same star schema: a single `CreditConsumption` fact joined one-to-many to the `Org` directory on user principal name.
+The report's two source paths are exposed as Power Query parameters — `CreditCsvPath` and `EntraCsvPath` — so swapping in a fresh extract is a parameter change and a refresh, with no model edits. Department attribution, capacity alerts, and the heavy / idle-heavy cohorts all derive from the same star schema: a single `CreditConsumption` fact joined one-to-many to the `Org` directory on user principal name.
 
 </details>
 
@@ -315,10 +318,10 @@ We want to hear your feedback and suggestions. Please reach out to jordanking@mi
 
 ## 📧 Email Your Admin
 
-> 📧 **Before you begin, you need two data exports: a Copilot credit consumption export and an organization directory export.**
+> 📧 **Before you begin, you need two data exports: a Copilot credit consumption export and a Microsoft Entra org directory export.**
 > This pre-written email covers both required exports, the exact fields, the roles and permissions needed to produce them, software requirements, and the connection option — everything your admin needs in one click.
 
-> **[📨 Email Prerequisites to Your IT Admin](mailto:?subject=Action%20Required%3A%20Data%20Export%20Needed%20for%20Credit%20Usage%20%26%20Chargebacks%20Report%20%28Power%20BI%29&body=To%3A%20IT%20Admin%20/%20Microsoft%20365%20Copilot%20Administrator%20/%20Data%20Owner%0ARe%3A%20Credit%20Usage%20%26%20Chargebacks%20%28CreditUsage%29%20-%20Power%20BI%20Report%20Setup%0A%0A%0AWHAT%20THIS%20REPORT%20DOES%0A%0AThe%20Credit%20Usage%20%26%20Chargebacks%20report%20is%20a%20Power%20BI%20report%20that%20monitors%20Copilot%0Acredit%20consumption%20across%20the%20organization.%20It%20attributes%20credits%20to%20departments%0Aand%20cost%20centers%2C%20tracks%20each%20team%27s%20usage%20against%20its%20allocated%20capacity%2C%20and%0Asurfaces%20heavy%20and%20idle-heavy%20users%20so%20owners%20can%20rebalance%20capacity%20and%20focus%0Aenablement.%20To%20build%20it%2C%20I%20need%20two%20data%20exports%20described%20below.%0A%0A%0ADATA%20SOURCES%20REQUIRED%0A%0A1.%20Copilot%20credit%20consumption%20export%20%28per-user%20credit%20breakdown%29%0A2.%20Organization%20directory%20export%20%28maps%20each%20user%20to%20a%20department%20and%20cost%20center%29%0A%0AFormat%3A%20CSV%20%28one%20row%20per%20user%29.%20The%20report%20connects%20to%20both%20files%20via%20two%20Power%0AQuery%20parameters%20-%20no%20database%20connection%20required.%0A%0A%0AREQUIRED%20FIELDS%20-%20DO%20NOT%20REMOVE%20OR%20RENAME%0A%0AExport%201%20-%20Copilot%20credit%20consumption%20%28one%20row%20per%20user%29%3A%0A-%20User%20Principal%20Name%0A-%20Cowork%20Credits%0A-%20WorkIQ%20Credits%0A-%20Other%20Credits%0A-%20Last%20Activity%20Date%0A%0AExport%202%20-%20Organization%20directory%20%28one%20row%20per%20user%29%3A%0A-%20UserPrincipalName%0A-%20DisplayName%0A-%20Department%0A-%20CostCenter%0A-%20Manager%0A-%20Country%0A-%20JobFamily%0A%0AThe%20two%20files%20join%20on%20the%20user%20principal%20name.%20Every%20user%20in%20the%20credit%20export%0Ashould%20have%20a%20matching%20row%20in%20the%20directory%20export%2C%20or%20those%20credits%20will%20not%20be%0Aattributed%20to%20a%20department.%0A%0A%0AINSIGHTS%20THIS%20REPORT%20PROVIDES%0A%0A-%20Consumption%20overview%3A%20total%20credits%2C%20active%20users%2C%20and%20average%20credits%20per%20user%0A-%20Surface%20breakdown%3A%20how%20credits%20split%20across%20Cowork%2C%20WorkIQ%2C%20and%20Other%0A-%20Capacity%20alerts%3A%20which%20departments%20are%20near%20or%20over%20their%20allocated%20capacity%0A-%20Heavy%20and%20idle-heavy%20users%3A%20who%20consumes%20the%20most%2C%20and%20who%20holds%20capacity%20while%0A%20%20inactive%0A-%20Department%20attribution%3A%20credits%20rolled%20up%20by%20department%20and%20cost%20center%20for%0A%20%20chargeback%0A%0A%0AROLES%20%26%20PERMISSIONS%20REQUIRED%0A%0A-%20Produce%20the%20Copilot%20credit%20consumption%20export%3A%20Microsoft%20365%20Copilot%20/%20billing%0A%20%20administrator%0A-%20Produce%20the%20organization%20directory%20export%3A%20HR%20/%20identity%20/%20directory%20owner%0A-%20Open%20and%20configure%20the%20template%3A%20Power%20BI%20Desktop%20user%0A%0A%0ASOFTWARE%20REQUIREMENTS%0A%0A-%20Power%20BI%20Desktop%20-%20required%20to%20open%20the%20.pbit%20template%20file%0A-%20Access%20to%20the%20Copilot%20consumption%20data%20and%20the%20organization%20directory%0A%0A%0ACONNECTION%20OPTION%0A%0ACSV%20Import%20%28.pbit%29%3A%20place%20the%20two%20exports%20on%20disk%2C%20open%20the%20template%2C%20and%20set%20the%0ACreditCsvPath%20and%20OrgCsvPath%20parameters%20to%20the%20two%20file%20paths.%20Refresh%20to%20load.%0A%0A%0APlease%20reply%20with%20the%20two%20CSV%20exports%20%28or%20the%20file%20paths%29%20and%20I%20will%20complete%20the%0Asetup.)**
+> **[📨 Email Prerequisites to Your IT Admin](mailto:?subject=Action%20Required%3A%20Data%20Export%20Needed%20for%20Credit%20Usage%20%26%20Chargebacks%20Report%20%28Power%20BI%29&body=To%3A%20IT%20Admin%20/%20Microsoft%20365%20Copilot%20Administrator%20/%20Data%20Owner%0ARe%3A%20Credit%20Usage%20%26%20Chargebacks%20%28CreditUsage%29%20-%20Power%20BI%20Report%20Setup%0A%0A%0AWHAT%20THIS%20REPORT%20DOES%0A%0AThe%20Credit%20Usage%20%26%20Chargebacks%20report%20is%20a%20Power%20BI%20report%20that%20monitors%20Copilot%0Acredit%20consumption%20across%20the%20organization.%20It%20attributes%20credits%20to%20departments%0Aand%20cost%20centers%2C%20tracks%20each%20team%27s%20usage%20against%20its%20allocated%20capacity%2C%20and%0Asurfaces%20heavy%20and%20idle-heavy%20users%20so%20owners%20can%20rebalance%20capacity%20and%20focus%0Aenablement.%20To%20build%20it%2C%20I%20need%20two%20data%20exports%20described%20below.%0A%0A%0ADATA%20SOURCES%20REQUIRED%0A%0A1.%20Copilot%20credit%20consumption%20export%20%28per-user%20credit%20breakdown%29%0A2.%20Microsoft%20Entra%20org%20directory%20export%20%28maps%20each%20user%20to%20department%2C%20job%20title%2C%20country%2C%20and%20manager%29%0A%0AFormat%3A%20CSV%20%28one%20row%20per%20user%29.%20The%20report%20connects%20to%20both%20files%20via%20two%20Power%0AQuery%20parameters%20-%20no%20database%20connection%20required.%0A%0A%0AREQUIRED%20FIELDS%20-%20DO%20NOT%20REMOVE%20OR%20RENAME%0A%0AExport%201%20-%20Copilot%20credit%20consumption%20%28one%20row%20per%20user%29%3A%0A-%20User%20Principal%20Name%0A-%20Cowork%20Credits%0A-%20WorkIQ%20Credits%0A-%20Other%20Credits%0A-%20Last%20Activity%20Date%0A%0AExport%202%20-%20Microsoft%20Entra%20org%20directory%20%28one%20row%20per%20user%29%3A%0A-%20userPrincipalName%0A-%20displayName%0A-%20department%0A-%20jobTitle%0A-%20usageLocation%0A-%20manager%0A%0AThe%20two%20files%20join%20on%20the%20user%20principal%20name.%20Every%20user%20in%20the%20credit%20export%0Ashould%20have%20a%20matching%20row%20in%20the%20directory%20export%2C%20or%20those%20credits%20will%20not%20be%0Aattributed%20to%20a%20department.%0A%0A%0AINSIGHTS%20THIS%20REPORT%20PROVIDES%0A%0A-%20Consumption%20overview%3A%20total%20credits%2C%20active%20users%2C%20and%20average%20credits%20per%20user%0A-%20Surface%20breakdown%3A%20how%20credits%20split%20across%20Cowork%2C%20WorkIQ%2C%20and%20Other%0A-%20Capacity%20alerts%3A%20which%20departments%20are%20near%20or%20over%20their%20allocated%20capacity%0A-%20Heavy%20and%20idle-heavy%20users%3A%20who%20consumes%20the%20most%2C%20and%20who%20holds%20capacity%20while%0A%20%20inactive%0A-%20Department%20attribution%3A%20credits%20rolled%20up%20by%20department%20and%20cost%20center%20for%0A%20%20chargeback%0A%0A%0AROLES%20%26%20PERMISSIONS%20REQUIRED%0A%0A-%20Produce%20the%20Copilot%20credit%20consumption%20export%3A%20Microsoft%20365%20Copilot%20/%20billing%0A%20%20administrator%0A-%20Produce%20the%20Microsoft%20Entra%20org%20directory%20export%3A%20identity%20/%20directory%20owner%0A-%20Open%20and%20configure%20the%20template%3A%20Power%20BI%20Desktop%20user%0A%0A%0ASOFTWARE%20REQUIREMENTS%0A%0A-%20Power%20BI%20Desktop%20-%20required%20to%20open%20the%20.pbit%20template%20file%0A-%20Access%20to%20the%20Copilot%20consumption%20data%20and%20the%20Microsoft%20Entra%20directory%0A%0A%0ACONNECTION%20OPTION%0A%0ACSV%20Import%20%28.pbit%29%3A%20place%20the%20two%20exports%20on%20disk%2C%20open%20the%20template%2C%20and%20set%20the%0ACreditCsvPath%20and%20EntraCsvPath%20parameters%20to%20the%20two%20file%20paths.%20Refresh%20to%20load.%0A%0A%0APlease%20reply%20with%20the%20two%20CSV%20exports%20%28or%20the%20file%20paths%29%20and%20I%20will%20complete%20the%0Asetup.)**
 
 ---
 
