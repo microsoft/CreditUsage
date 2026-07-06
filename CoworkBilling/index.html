@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copilot Cowork Credit Chargeback</title>
+    <meta name="description" content="Client-side Copilot Cowork Credit chargeback report. All processing happens locally in your browser.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ============================ LANDING ============================ -->
+    <section id="landing" class="container">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>Copilot Cowork Credit Chargeback</h1>
+                    <p class="subtitle">Turn Entra + Copilot credit exports into a departmental chargeback report &mdash; entirely in your browser.</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="info-box privacy-box">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <p><strong>All processing happens locally in your browser.</strong> Your files never leave your device. No uploads, no servers, no telemetry. Everything you see is computed on this page from the files you choose.</p>
+        </div>
+
+        <div class="instructions-section">
+            <h2>How it works</h2>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Export your Entra users</h3>
+                    <p>From Microsoft Entra admin center, export the user list as CSV. It supplies the organizational attributes &mdash; department, business unit, job family, cost center, country, and manager.</p>
+                    <div class="info-box"><p><small>Expected columns (any subset): User Principal Name, Display Name, Department, Job Title, Job Family, Cost Center, Business Unit, Country / Usage Location, Manager.</small></p></div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Export your Copilot credit usage</h3>
+                    <p>From the Copilot admin / Cost Management report, export monthly credit usage as CSV. It supplies usage &mdash; credits used, credit limit, license status, last activity, and session count.</p>
+                    <div class="info-box"><p><small>Expected columns: User Principal Name, Monthly credits used, Monthly credit limit, Microsoft 365 Copilot license, Last activity date, Session Count.</small></p></div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Generate the report</h3>
+                    <p>The two files are joined on user principal name (UPN). We compute per-user overage, utilization, cohorts, and a headline chargeback based on individual overage. Slice by any dimension and adjust the rate live.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions-section">
+            <h2>Load your data</h2>
+            <div class="upload-grid">
+                <div>
+                    <label class="dz-label">Entra user export (CSV)</label>
+                    <div class="upload-area" id="dzEntra">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p><strong>Drop the Entra CSV here</strong> or click to browse</p>
+                        <p class="dz-status" id="statusEntra">No file selected</p>
+                        <input type="file" id="fileEntra" accept=".csv,text/csv" hidden>
+                    </div>
+                </div>
+                <div>
+                    <label class="dz-label">Copilot credit / Cost Management export (CSV)</label>
+                    <div class="upload-area" id="dzCredits">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p><strong>Drop the Copilot credit CSV here</strong> or click to browse</p>
+                        <p class="dz-status" id="statusCredits">No file selected</p>
+                        <input type="file" id="fileCredits" accept=".csv,text/csv" hidden>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-grid">
+                <div class="config-item">
+                    <label for="rateInput">Rate per credit ($)</label>
+                    <input type="number" id="rateInput" min="0" step="0.001" value="0.01">
+                    <small>Every dollar figure in the report is this rate &times; credits. Adjust it here or live in the dashboard.</small>
+                </div>
+                <div class="config-item">
+                    <label for="fallbackLimit">Fallback credit limit</label>
+                    <input type="number" id="fallbackLimit" min="0" step="1" value="400">
+                    <small>Used only when the credit file has no per-user limit column.</small>
+                </div>
+            </div>
+
+            <div class="landing-actions">
+                <button class="btn-primary" id="btnGenerate" disabled>Generate Report</button>
+                <button class="btn-secondary btn-gradient" id="btnDemo">View Demo Report</button>
+            </div>
+            <p id="landingError" class="landing-error" hidden></p>
+        </div>
+
+        <footer>
+            <p>100% client-side &middot; No data leaves your browser &middot; <a href="PRIVACY.md">Privacy</a></p>
+        </footer>
+    </section>
+
+    <!-- ============================ DASHBOARD ============================ -->
+    <section id="dashboard" hidden>
+        <div class="topbar">
+            <div class="topbar-title">
+                <span class="topbar-emoji">&#128202;</span>
+                <div>
+                    <h1>Copilot Cowork Credit Chargeback</h1>
+                    <p class="topbar-sub" id="topbarSub">Report</p>
+                </div>
+            </div>
+            <div class="topbar-actions">
+                <button class="action-btn" id="btnDeck"><span class="action-icon">&#128221;</span><span class="action-text">Export Deck</span></button>
+                <button class="action-btn" id="btnPdf"><span class="action-icon">&#128196;</span><span class="action-text">Export PDF</span></button>
+                <button class="action-btn" id="btnReset"><span class="action-icon">&#8617;</span><span class="action-text">Start Over</span></button>
+            </div>
+        </div>
+
+        <div id="demoBanner" class="demo-banner" hidden>
+            <strong>&#9888; DEMO DATA ACTIVE</strong> &mdash; synthetic figures for illustration only. Do not use for real decisions.
+        </div>
+
+        <div class="dash-layout container">
+            <aside class="slicer-rail">
+                <h3 class="rail-title">Slicers</h3>
+                <div class="config-item">
+                    <label for="sliceBy">Slice by</label>
+                    <select id="sliceBy"></select>
+                </div>
+                <div class="config-item">
+                    <label for="rateWhatIf">Rate per credit ($)</label>
+                    <input type="number" id="rateWhatIf" min="0" step="0.001" value="0.01">
+                    <small>Live what-if. Recomputes every $ figure.</small>
+                </div>
+                <div class="config-item">
+                    <label>Usage cohorts</label>
+                    <div id="cohortToggles" class="cohort-toggles"></div>
+                    <small>Toggle cohorts to include in the current view.</small>
+                </div>
+                <div class="rail-meta" id="railMeta"></div>
+            </aside>
+
+            <main class="dash-main">
+                <nav class="tab-nav" id="tabNav"></nav>
+                <div id="viewContainer"></div>
+            </main>
+        </div>
+
+        <footer id="dashFooter"></footer>
+    </section>
+
+    <!-- Local libraries (offline). Order: JSZip before pptxgen. -->
+    <script src="lib/jszip.min.js"></script>
+    <script src="lib/pptxgen.bundle.js"></script>
+    <script src="lib/html2canvas.min.js"></script>
+    <script src="lib/jspdf.umd.min.js"></script>
+    <script src="demo-data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
