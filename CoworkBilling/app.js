@@ -526,9 +526,11 @@
         return '<h2 class="view-title">' + esc(title) + '</h2><p class="view-desc">' + desc + '</p>';
     }
 
-    function metricCard(label, value, sub, accent) {
-        return '<div class="metric-card ' + (accent || '') + '"><div class="metric-label">' + esc(label) + '</div>' +
-            '<div class="metric-value">' + esc(value) + '</div>' +
+    function metricCard(label, value, sub, accent, tip) {
+        var info = tip ? '<span class="metric-info" tabindex="0" aria-label="' + esc(tip) +
+            '">?<span class="metric-tip">' + esc(tip) + '</span></span>' : '';
+        return '<div class="metric-card ' + (accent || '') + '"><div class="metric-label">' +
+            esc(label) + info + '</div><div class="metric-value">' + esc(value) + '</div>' +
             (sub ? '<div class="metric-sublabel">' + esc(sub) + '</div>' : '') + '</div>';
     }
 
@@ -537,11 +539,11 @@
         var top = groups.slice(0, 12).map(function (g) { return { label: g.label, value: g.chargeback }; });
         c.innerHTML = header('Executive Overview', 'Headline chargeback is based on individual over-limit credits, priced at the current rate of ' + fmtMoney(state.rate) + ' per credit.') +
             '<div class="metrics-grid">' +
-            metricCard('Users', fmtInt(org.userCount), org.licensedUsers + ' licensed') +
-            metricCard('Total Credits Used', fmtInt(org.totalUsed), 'Avg ' + fmtNum2(org.avgCreditsPerUser) + '/user') +
-            metricCard('Chargeback (overage $)', fmtMoney(org.chargeback), fmtInt(org.totalOverageCredits) + ' overage credits', 'accent-red') +
-            metricCard('Utilization', fmtPct(org.utilization), fmtInt(org.totalUsed) + ' / ' + fmtInt(org.totalLimit), 'accent-amber') +
-            metricCard('Users Over Limit', fmtInt(org.usersOverLimit), org.usersNearLimit + ' near, ' + org.usersWithinBudget + ' within', 'accent-red') +
+            metricCard('Users', fmtInt(org.userCount), org.licensedUsers + ' licensed', '', 'Distinct users in scope after any slicer filter. Licensed counts those holding a Copilot license.') +
+            metricCard('Total Credits Used', fmtInt(org.totalUsed), 'Avg ' + fmtNum2(org.avgCreditsPerUser) + '/user', '', 'Sum of Copilot credits consumed by users in scope. Avg = total used / users.') +
+            metricCard('Chargeback (overage $)', fmtMoney(org.chargeback), fmtInt(org.totalOverageCredits) + ' overage credits', 'accent-red', 'Cost billed back for use above each user allowance: sum of per-user overage credits x current rate ($/credit).') +
+            metricCard('Utilization', fmtPct(org.utilization), fmtInt(org.totalUsed) + ' / ' + fmtInt(org.totalLimit), 'accent-amber', 'Credits used / total allowance across users in scope. Above 100% signals overage.') +
+            metricCard('Users Over Limit', fmtInt(org.usersOverLimit), org.usersNearLimit + ' near, ' + org.usersWithinBudget + ' within', 'accent-red', 'Users whose used credits exceed their allowance. Near = within 10% of the limit; within = under budget.') +
             '</div>' +
             '<div class="panel"><h3>Chargeback by ' + esc(state.sliceBy) + ' (top 12)</h3><div id="execChart"></div></div>' +
             '<div class="panel"><h3>Group rollup</h3>' +
@@ -712,11 +714,11 @@
         var same = Math.abs(state.rate - 0.01) < 1e-9;
         c.innerHTML = header('FOCUS Cost View', 'FinOps FOCUS-style cost columns derived from org credits used at the current rate.') +
             '<div class="metrics-grid">' +
-            metricCard('List Cost', fmtMoney(f.listCost), 'at $0.01/credit') +
-            metricCard('Contracted Cost', fmtMoney(f.contractedCost), 'at ' + fmtMoney(state.rate) + '/credit') +
-            metricCard('Effective Cost', fmtMoney(f.effectiveCost), '= contracted') +
-            metricCard('Billed Cost', fmtMoney(f.billedCost), '= contracted') +
-            metricCard('Savings vs List', fmtMoney(f.savingsVsList), same ? 'zero at list rate' : 'from rate discount', f.savingsVsList > 0 ? 'accent-green' : '') +
+            metricCard('List Cost', fmtMoney(f.listCost), 'at $0.01/credit', '', 'Credits used x list rate ($0.01/credit), before any discount.') +
+            metricCard('Contracted Cost', fmtMoney(f.contractedCost), 'at ' + fmtMoney(state.rate) + '/credit', '', 'Credits used x your contracted rate ($/credit).') +
+            metricCard('Effective Cost', fmtMoney(f.effectiveCost), '= contracted', '', 'Cost after discount. Equals contracted cost in this model.') +
+            metricCard('Billed Cost', fmtMoney(f.billedCost), '= contracted', '', 'Amount invoiced. Equals contracted cost in this model.') +
+            metricCard('Savings vs List', fmtMoney(f.savingsVsList), same ? 'zero at list rate' : 'from rate discount', f.savingsVsList > 0 ? 'accent-green' : '', 'List Cost - Effective Cost: the dollar value of your rate discount.') +
             '</div>' +
             '<div class="info-box"><p>' + (same
                 ? 'At the default rate of $0.01/credit, List and Contracted costs are equal, so savings versus list is $0. Lower the rate with the what-if to see savings diverge.'
@@ -739,9 +741,9 @@
                         '</td><td class="num">' + fmtInt(a.perTierAllowance[cohort]) + '</td></tr>';
                 }).join('');
                 return '<div class="metrics-grid">' +
-                    metricCard('Affordable credits', fmtInt(a.affordableCredits), 'at ' + fmtMoney(est.rate) + '/credit') +
-                    metricCard('Required credits', fmtInt(a.requiredCredits), 'from tier mix') +
-                    metricCard('Blended credits / user', fmtNum2(a.blendedCreditsPerUser), 'per month') +
+                    metricCard('Affordable credits', fmtInt(a.affordableCredits), 'at ' + fmtMoney(est.rate) + '/credit', '', 'Credits your budget buys: budget / rate ($/credit).') +
+                    metricCard('Required credits', fmtInt(a.requiredCredits), 'from tier mix', '', 'Credits implied by the tier mix and per-tier average consumption.') +
+                    metricCard('Blended credits / user', fmtNum2(a.blendedCreditsPerUser), 'per month', '', 'Required credits / active users.') +
                     '</div>' +
                     '<p class="' + headClass + '">' + headLabel + fmtInt(Math.abs(a.headroomCredits)) + ' credits</p>' +
                     '<p><span class="' + badgeClass + '">' + badgeLabel + '</span></p>' +
@@ -757,11 +759,11 @@
                     '"></span>' + esc(t.cohort) + ': ' + fmtMoney(t.cost) + ' (' + fmtPct(pctOfCost) + ')</div>';
             }).join('');
             return '<div class="metrics-grid">' +
-                metricCard('Monthly cost', fmtMoney(p.monthlyCost), 'projected') +
-                metricCard('Annual cost', fmtMoney(p.annualCost), 'monthly x 12') +
-                metricCard('Active users', fmtInt(est.active), fmtInt(est.licensed) + ' licensed') +
-                metricCard('Blended $/user/mo', fmtMoney(p.blended), 'per active user') +
-                metricCard('Total monthly credits', fmtInt(p.monthlyCredits), 'across tiers') +
+                metricCard('Monthly cost', fmtMoney(p.monthlyCost), 'projected', '', 'Sum across tiers of users x avg credits x rate ($/credit).') +
+                metricCard('Annual cost', fmtMoney(p.annualCost), 'monthly x 12', '', 'Monthly cost x 12.') +
+                metricCard('Active users', fmtInt(est.active), fmtInt(est.licensed) + ' licensed', '', 'Users assumed active. Licensed is the eligible population.') +
+                metricCard('Blended $/user/mo', fmtMoney(p.blended), 'per active user', '', 'Monthly cost / active users.') +
+                metricCard('Total monthly credits', fmtInt(p.monthlyCredits), 'across tiers', '', 'Sum of users x avg credits across all tiers.') +
                 '</div>' +
                 '<p class="' + deltaClass + '">vs current actuals: ' + sign + fmtMoney(Math.abs(p.deltaCost)) +
                 ' (' + sign + fmtPct(Math.abs(p.deltaPct)) + ')</p>' +
