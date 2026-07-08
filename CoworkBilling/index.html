@@ -141,6 +141,12 @@
                     <select id="sliceBy"></select>
                 </div>
                 <div class="config-item">
+                    <div class="value-filter-head"><label>Filter to values</label><button type="button" id="clearValueFilter" class="link-btn" hidden>Clear</button></div>
+                    <input type="text" id="valueFilterSearch" class="value-filter-search" placeholder="Search values&hellip;" hidden>
+                    <div id="valueFilter" class="value-filter"></div>
+                    <small>Click values to filter the whole report. None selected = all.</small>
+                </div>
+                <div class="config-item">
                     <label for="rateWhatIf">Rate per credit ($)</label>
                     <input type="number" id="rateWhatIf" min="0" step="0.001" value="0.01">
                     <small>Live what-if. Recomputes every $ figure.</small>

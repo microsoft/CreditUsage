@@ -18,10 +18,22 @@
         demoActive: false,
         activeTab: 'exec',
         cohortFilter: {}, // cohort name -> boolean (enabled)
-        computed: null
+        valueFilter: { field: null, values: [] },
+        joinStats: { matched: 0, total: 0 },
+        computed: null,
+        estimator: null
     };
 
     var COHORT_ORDER = ['Light', 'Regular', 'Engaged', 'Native', 'Power', 'Frontier'];
+
+    var COHORT_COLORS = {
+        Light: '#4A9EF7',
+        Regular: '#00D4FF',
+        Engaged: '#34D399',
+        Native: '#F59E0B',
+        Power: '#A855F7',
+        Frontier: '#EF4444'
+    };
 
     var DIMS = [
         { key: 'Department', field: 'department' },
@@ -42,6 +54,7 @@
         { id: 'cohorts', label: 'Usage Cohorts' },
         { id: 'users', label: 'User Detail' },
         { id: 'focus', label: 'FOCUS Cost View' },
+        { id: 'estimator', label: 'Cost Estimator' },
         { id: 'glossary', label: 'Glossary / Notes' }
     ];
 
@@ -79,6 +92,7 @@
     }
     function fmtPct(v) { return ((Number(v) || 0) * 100).toFixed(1) + '%'; }
     function fmtNum2(v) { return (Number(v) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+    function round1(v) { return Math.round((Number(v) || 0) * 10) / 10; }
 
     function normUpn(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
 
@@ -160,9 +174,12 @@
         state.usedFallbackLimit = !creditMap.creditLimit;
 
         var users = [];
+        var joinMatched = 0, joinTotal = 0;
         creditRows.forEach(function (crow) {
             var upn = normUpn(creditMap.upn ? crow[creditMap.upn] : '');
             if (!upn) return;
+            joinTotal += 1;
+            if (byUpn[upn]) joinMatched += 1;
             var erow = byUpn[upn] || {};
             var get = function (map, row, field) { return map[field] ? String(row[map[field]] || '').trim() : ''; };
 
@@ -186,6 +203,7 @@
                 lastActivity: get(creditMap, crow, 'lastActivity')
             });
         });
+        state.joinStats = { matched: joinMatched, total: joinTotal };
         return users;
     }
 
@@ -236,11 +254,21 @@
         });
     }
 
+    function scopedUsers() {
+        var vf = state.valueFilter;
+        if (!vf || !vf.field || !vf.values.length) return state.users;
+        return state.users.filter(function (u) {
+            var v = (u[vf.field] && String(u[vf.field]).trim()) || 'Unknown';
+            return vf.values.indexOf(v) !== -1;
+        });
+    }
+
     function activeUsers() {
         var f = state.cohortFilter;
+        var base = scopedUsers();
         var anyOff = COHORT_ORDER.some(function (c) { return f[c] === false; });
-        if (!anyOff) return state.users;
-        return state.users.filter(function (u) { return f[u.cohort] !== false; });
+        if (!anyOff) return base;
+        return base.filter(function (u) { return f[u.cohort] !== false; });
     }
 
     function aggregate(users, field) {
@@ -307,7 +335,7 @@
     }
 
     function cohortStats() {
-        var users = state.users; // cohorts view uses all users
+        var users = scopedUsers(); // cohorts view respects the value filter
         var stats = {};
         COHORT_ORDER.forEach(function (c) { stats[c] = { cohort: c, users: 0, totalUsed: 0 }; });
         users.forEach(function (u) {
@@ -425,6 +453,64 @@
         return s === 'Over' ? 'cell-over' : (s === 'Near' ? 'cell-near' : 'cell-under');
     }
 
+    // ------------------------------------------------------- cost estimator
+    function seedEstimator() {
+        var org = state.computed.org;
+        var stats = cohortStats();
+        var active = org.userCount;
+        var licensed = org.licensedUsers > 0 ? org.licensedUsers : org.userCount;
+        var est = { licensed: licensed, active: active, rate: state.rate, mode: 'estimator', budget: 0, mix: {}, avg: {} };
+        stats.forEach(function (s) {
+            est.mix[s.cohort] = round1(s.pct * 100);
+            est.avg[s.cohort] = Math.round(s.avg);
+        });
+        var proj = computeEstimate(est);
+        est.budget = Math.round(proj.monthlyCost);
+        state.estimator = est;
+        return est;
+    }
+
+    function computeEstimate(est) {
+        var byTier = [];
+        var monthlyCredits = 0, monthlyCost = 0, mixSum = 0;
+        COHORT_ORDER.forEach(function (c) {
+            var share = (est.mix[c] || 0) / 100;
+            var usersInTier = est.active * share;
+            var credits = usersInTier * (est.avg[c] || 0);
+            var cost = credits * est.rate;
+            monthlyCredits += credits;
+            monthlyCost += cost;
+            mixSum += (est.mix[c] || 0);
+            byTier.push({ cohort: c, share: share, usersInTier: usersInTier, credits: credits, cost: cost });
+        });
+        var annualCost = monthlyCost * 12;
+        var blended = est.active > 0 ? monthlyCost / est.active : 0;
+        var actualMonthlyCost = state.computed.org.totalUsed * est.rate;
+        var deltaCost = monthlyCost - actualMonthlyCost;
+        var deltaPct = actualMonthlyCost > 0 ? deltaCost / actualMonthlyCost : 0;
+        return {
+            monthlyCredits: monthlyCredits, monthlyCost: monthlyCost, annualCost: annualCost,
+            blended: blended, mixSum: mixSum, byTier: byTier,
+            actualMonthlyCost: actualMonthlyCost, deltaCost: deltaCost, deltaPct: deltaPct
+        };
+    }
+
+    function computeAllocator(est) {
+        var affordableCredits = est.rate > 0 ? est.budget / est.rate : 0;
+        var base = computeEstimate(est);
+        var requiredCredits = base.monthlyCredits;
+        var scale = requiredCredits > 0 ? affordableCredits / requiredCredits : 0;
+        var blendedCreditsPerUser = est.active > 0 ? affordableCredits / est.active : 0;
+        var status = requiredCredits <= affordableCredits ? 'within' : 'over';
+        var perTierAllowance = {};
+        COHORT_ORDER.forEach(function (c) { perTierAllowance[c] = Math.round((est.avg[c] || 0) * scale); });
+        return {
+            affordableCredits: affordableCredits, requiredCredits: requiredCredits,
+            blendedCreditsPerUser: blendedCreditsPerUser, status: status, scale: scale,
+            perTierAllowance: perTierAllowance, headroomCredits: affordableCredits - requiredCredits
+        };
+    }
+
     // ------------------------------------------------------------- views
     function renderView(tab) {
         state.activeTab = tab;
@@ -432,7 +518,7 @@
             b.classList.toggle('active', b.getAttribute('data-tab') === tab);
         });
         var c = $('viewContainer');
-        var r = { exec: viewExec, group: viewGroup, cc: viewCC, opt: viewOpt, standout: viewStandout, cohorts: viewCohorts, users: viewUsers, focus: viewFocus, glossary: viewGlossary }[tab];
+        var r = { exec: viewExec, group: viewGroup, cc: viewCC, opt: viewOpt, standout: viewStandout, cohorts: viewCohorts, users: viewUsers, focus: viewFocus, estimator: viewEstimator, glossary: viewGlossary }[tab];
         r(c);
     }
 
@@ -637,6 +723,224 @@
                 : 'Because the contracted rate (' + fmtMoney(state.rate) + ') differs from the $0.01 list rate, contracted cost diverges from list and produces the savings shown above.') + '</p></div>';
     }
 
+    function viewEstimator(c) {
+        if (!state.estimator) seedEstimator();
+
+        function projectionHTML() {
+            var est = state.estimator;
+            if (est.mode === 'allocator') {
+                var a = computeAllocator(est);
+                var headClass = a.headroomCredits >= 0 ? 'est-delta pos' : 'est-delta neg';
+                var headLabel = a.headroomCredits >= 0 ? 'Headroom: ' : 'Shortfall: ';
+                var badgeClass = a.status === 'within' ? 'est-badge within' : 'est-badge over';
+                var badgeLabel = a.status === 'within' ? 'Within budget' : 'Over budget';
+                var rows = COHORT_ORDER.map(function (cohort) {
+                    return '<tr><td>' + esc(cohort) + '</td><td class="num">' + fmtInt(est.avg[cohort] || 0) +
+                        '</td><td class="num">' + fmtInt(a.perTierAllowance[cohort]) + '</td></tr>';
+                }).join('');
+                return '<div class="metrics-grid">' +
+                    metricCard('Affordable credits', fmtInt(a.affordableCredits), 'at ' + fmtMoney(est.rate) + '/credit') +
+                    metricCard('Required credits', fmtInt(a.requiredCredits), 'from tier mix') +
+                    metricCard('Blended credits / user', fmtNum2(a.blendedCreditsPerUser), 'per month') +
+                    '</div>' +
+                    '<p class="' + headClass + '">' + headLabel + fmtInt(Math.abs(a.headroomCredits)) + ' credits</p>' +
+                    '<p><span class="' + badgeClass + '">' + badgeLabel + '</span></p>' +
+                    '<div class="table-wrap"><table><thead><tr><th>Cohort</th><th class="num">Current avg</th>' +
+                    '<th class="num">Suggested allowance</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+            }
+            var p = computeEstimate(est);
+            var deltaClass = p.deltaCost <= 0 ? 'est-delta pos' : 'est-delta neg';
+            var sign = p.deltaCost > 0 ? '+' : (p.deltaCost < 0 ? '\u2212' : '');
+            var legend = p.byTier.map(function (t) {
+                var pctOfCost = p.monthlyCost > 0 ? t.cost / p.monthlyCost : 0;
+                return '<div class="est-legend-item"><span class="est-swatch" style="background:' + COHORT_COLORS[t.cohort] +
+                    '"></span>' + esc(t.cohort) + ': ' + fmtMoney(t.cost) + ' (' + fmtPct(pctOfCost) + ')</div>';
+            }).join('');
+            return '<div class="metrics-grid">' +
+                metricCard('Monthly cost', fmtMoney(p.monthlyCost), 'projected') +
+                metricCard('Annual cost', fmtMoney(p.annualCost), 'monthly x 12') +
+                metricCard('Active users', fmtInt(est.active), fmtInt(est.licensed) + ' licensed') +
+                metricCard('Blended $/user/mo', fmtMoney(p.blended), 'per active user') +
+                metricCard('Total monthly credits', fmtInt(p.monthlyCredits), 'across tiers') +
+                '</div>' +
+                '<p class="' + deltaClass + '">vs current actuals: ' + sign + fmtMoney(Math.abs(p.deltaCost)) +
+                ' (' + sign + fmtPct(Math.abs(p.deltaPct)) + ')</p>' +
+                '<p class="est-note">Current actual monthly cost is ' + fmtMoney(p.actualMonthlyCost) + ' from ' +
+                fmtInt(state.computed.org.totalUsed) + ' credits used.</p>' +
+                '<div class="est-stack-wrap"><h5>Per-tier monthly cost</h5><div id="estStackChart"></div></div>' +
+                '<div class="est-legend">' + legend + '</div>';
+        }
+
+        function renderProjection() {
+            var host = $('estProjection');
+            if (!host) return;
+            host.innerHTML = projectionHTML();
+            if (state.estimator.mode !== 'allocator') {
+                var p = computeEstimate(state.estimator);
+                horizontalBarChart($('estStackChart'), p.byTier.map(function (t) {
+                    return { label: t.cohort, value: t.cost, color: COHORT_COLORS[t.cohort] };
+                }), { valueFormat: fmtMoney });
+            }
+        }
+
+        function updateIndicators() {
+            var est = state.estimator;
+            var sumEl = $('estMixSum');
+            if (sumEl) {
+                var sum = 0;
+                COHORT_ORDER.forEach(function (co) { sum += (est.mix[co] || 0); });
+                var ok = Math.abs(sum - 100) <= 0.5;
+                sumEl.textContent = fmtNum2(sum) + '%' + (ok ? ' \u2713' : '');
+                sumEl.className = ok ? 'est-sum ok' : 'est-sum warn';
+            }
+            var adEl = $('estAdoption');
+            if (adEl) adEl.textContent = est.licensed > 0 ? fmtPct(est.active / est.licensed) : '\u2014';
+        }
+
+        function normalizeMix() {
+            var est = state.estimator;
+            var sum = 0;
+            COHORT_ORDER.forEach(function (co) { sum += (est.mix[co] || 0); });
+            if (sum <= 0) return;
+            COHORT_ORDER.forEach(function (co) { est.mix[co] = round1((est.mix[co] || 0) / sum * 100); });
+        }
+
+        function exportEstimate() {
+            var est = state.estimator;
+            var p = computeEstimate(est);
+            var lines = [];
+            function q(v) { var s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+            function row(a, b) { lines.push(q(a) + ',' + q(b)); }
+            lines.push('Section,Value');
+            row('Population', '');
+            row('Total Copilot-licensed users', est.licensed);
+            row('Active Cowork users', est.active);
+            row('Adoption %', est.licensed > 0 ? (est.active / est.licensed * 100).toFixed(1) : '0');
+            lines.push('');
+            lines.push('Tier mix (% of active),Percent');
+            COHORT_ORDER.forEach(function (co) { row(co, est.mix[co] || 0); });
+            lines.push('');
+            lines.push('Avg credits per user,Credits');
+            COHORT_ORDER.forEach(function (co) { row(co, est.avg[co] || 0); });
+            lines.push('');
+            row('Pricing ($/credit)', est.rate);
+            lines.push('');
+            lines.push('Projection totals,Value');
+            row('Monthly credits', Math.round(p.monthlyCredits));
+            row('Monthly cost', p.monthlyCost.toFixed(2));
+            row('Annual cost', p.annualCost.toFixed(2));
+            row('Blended $/user/month', p.blended.toFixed(2));
+            row('Current actual monthly cost', p.actualMonthlyCost.toFixed(2));
+            row('Delta cost', p.deltaCost.toFixed(2));
+            lines.push('');
+            lines.push('Per-tier contribution,Users,Credits,Monthly cost');
+            p.byTier.forEach(function (t) {
+                lines.push(q(t.cohort) + ',' + q(Math.round(t.usersInTier)) + ',' + q(Math.round(t.credits)) + ',' + q(t.cost.toFixed(2)));
+            });
+            var csv = lines.join('\r\n');
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'cowork-cost-estimate.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+        }
+
+        function bindNum(id, field) {
+            var el = $(id);
+            if (!el) return;
+            el.addEventListener('input', function () {
+                var v = parseFloat(el.value);
+                if (!isFinite(v) || v < 0) v = 0;
+                state.estimator[field] = v;
+                renderProjection();
+                updateIndicators();
+            });
+        }
+
+        function bindMap(id, mapName, key) {
+            var el = $(id);
+            if (!el) return;
+            el.addEventListener('input', function () {
+                var v = parseFloat(el.value);
+                if (!isFinite(v) || v < 0) v = 0;
+                state.estimator[mapName][key] = v;
+                renderProjection();
+                updateIndicators();
+            });
+        }
+
+        function wire() {
+            Array.prototype.forEach.call(document.querySelectorAll('.est-tab'), function (b) {
+                b.addEventListener('click', function () {
+                    state.estimator.mode = b.getAttribute('data-est-mode');
+                    renderView('estimator');
+                });
+            });
+            bindNum('estLicensed', 'licensed');
+            bindNum('estActive', 'active');
+            bindNum('estRate', 'rate');
+            bindNum('estBudget', 'budget');
+            COHORT_ORDER.forEach(function (cohort) {
+                bindMap('estMix_' + cohort, 'mix', cohort);
+                bindMap('estAvg_' + cohort, 'avg', cohort);
+            });
+            var reset = $('estReset');
+            if (reset) reset.addEventListener('click', function () { seedEstimator(); renderView('estimator'); });
+            var norm = $('estNormalize');
+            if (norm) norm.addEventListener('click', function () { normalizeMix(); renderView('estimator'); });
+            var exp = $('estExport');
+            if (exp) exp.addEventListener('click', exportEstimate);
+        }
+
+        var est = state.estimator;
+        var adoption = est.licensed > 0 ? est.active / est.licensed : 0;
+        var mixInputs = COHORT_ORDER.map(function (cohort) {
+            return '<div class="est-row"><label>' + esc(cohort) + '</label>' +
+                '<input type="number" step="0.1" min="0" class="est-input" id="estMix_' + cohort + '" value="' + (est.mix[cohort] || 0) + '"></div>';
+        }).join('');
+        var avgInputs = COHORT_ORDER.map(function (cohort) {
+            return '<div class="est-row"><label>' + esc(cohort) + '</label>' +
+                '<input type="number" step="1" min="0" class="est-input" id="estAvg_' + cohort + '" value="' + (est.avg[cohort] || 0) + '"></div>';
+        }).join('');
+        var budgetRow = est.mode === 'allocator'
+            ? '<div class="est-row"><label>Target monthly budget ($)</label><input type="number" step="1" min="0" class="est-input" id="estBudget" value="' + (est.budget || 0) + '"></div>'
+            : '';
+
+        c.innerHTML = header('Cost Estimator', 'A forward-looking planner. The tiers are your six usage cohorts, seeded from the loaded data and fully editable for what-if scenarios. All math runs live in your browser.') +
+            '<div class="est-tabs">' +
+            '<button class="est-tab' + (est.mode === 'estimator' ? ' active' : '') + '" data-est-mode="estimator">Cost Estimator</button>' +
+            '<button class="est-tab' + (est.mode === 'allocator' ? ' active' : '') + '" data-est-mode="allocator">Budget Allocator</button>' +
+            '</div>' +
+            '<div class="est-grid">' +
+            '<div class="est-panel"><h4>Assumptions</h4>' +
+            '<div class="est-section"><h5>Population</h5>' +
+            '<div class="est-row"><label>Total Copilot-licensed users</label><input type="number" step="1" min="0" class="est-input" id="estLicensed" value="' + (est.licensed || 0) + '"></div>' +
+            '<div class="est-row"><label>Active Cowork users</label><input type="number" step="1" min="0" class="est-input" id="estActive" value="' + (est.active || 0) + '"></div>' +
+            '<p class="est-note">Adoption: <span id="estAdoption">' + fmtPct(adoption) + '</span></p>' +
+            '</div>' +
+            '<div class="est-section"><h5>Tier mix (% of active users)</h5>' + mixInputs +
+            '<p class="est-note">Total: <span id="estMixSum" class="est-sum"></span> <button class="link-btn" id="estNormalize">Normalize</button></p>' +
+            '</div>' +
+            '<div class="est-section"><h5>Avg credits / user / month</h5>' + avgInputs + '</div>' +
+            '<div class="est-section"><h5>Pricing</h5>' +
+            '<div class="est-row"><label>$ per credit</label><input type="number" step="0.001" min="0" class="est-input" id="estRate" value="' + est.rate + '"></div>' +
+            budgetRow +
+            '</div>' +
+            '<div class="est-actions"><button class="btn-secondary" id="estReset">Reset to data</button>' +
+            '<button class="btn-secondary" id="estExport">Export Snapshot (CSV)</button></div>' +
+            '</div>' +
+            '<div class="est-panel"><h4>Live projection</h4><div id="estProjection"></div></div>' +
+            '</div>';
+
+        renderProjection();
+        updateIndicators();
+        wire();
+    }
+
     function viewGlossary(c) {
         var rows = [
             ['Chargeback (overage-based)', 'The headline dollar figure. Sum of each user\'s over-limit credits (max(0, used - limit)) multiplied by the rate per credit. Groups are charged for individual overage, not group totals.'],
@@ -784,8 +1088,61 @@
 
     function buildSliceBy() {
         var sel = $('sliceBy');
-        sel.innerHTML = state.dims.map(function (d) { return '<option value="' + esc(d.key) + '"' + (d.key === state.sliceBy ? ' selected' : '') + '>' + esc(d.key) + '</option>'; }).join('');
-        sel.onchange = function () { state.sliceBy = sel.value; save('cowork_sliceBy', sel.value); refresh(); };
+        if (!sel) return;
+        var dims = state.dims;
+        if (!dims || !dims.length) { dims = [{ key: 'Department', field: 'department' }]; state.sliceBy = 'Department'; }
+        sel.innerHTML = dims.map(function (d) { return '<option value="' + esc(d.key) + '"' + (d.key === state.sliceBy ? ' selected' : '') + '>' + esc(d.key) + '</option>'; }).join('');
+        sel.onchange = function () { state.sliceBy = sel.value; save('cowork_sliceBy', sel.value); state.valueFilter = { field: dimField(sel.value), values: [] }; buildValueFilter(); refresh(); };
+    }
+
+    function buildValueFilter() {
+        var box = $('valueFilter');
+        if (!box) return;
+        var field = dimField(state.sliceBy);
+        var counts = {};
+        state.users.forEach(function (u) {
+            var v = (u[field] && String(u[field]).trim()) || 'Unknown';
+            counts[v] = (counts[v] || 0) + 1;
+        });
+        var items = Object.keys(counts).map(function (k) { return { label: k, count: counts[k] }; });
+        items.sort(function (a, b) { return b.count - a.count || (a.label < b.label ? -1 : (a.label > b.label ? 1 : 0)); });
+        box.innerHTML = items.map(function (it) {
+            var on = state.valueFilter.values.indexOf(it.label) !== -1;
+            return '<button type="button" class="value-chip' + (on ? ' on' : '') + '" data-value="' + esc(it.label) + '">' + esc(it.label + ' (' + it.count + ')') + '</button>';
+        }).join('');
+        var search = $('valueFilterSearch');
+        if (search) {
+            search.hidden = items.length <= 12;
+            search.oninput = function () {
+                var q = String(search.value || '').toLowerCase();
+                Array.prototype.forEach.call(box.querySelectorAll('.value-chip'), function (chip) {
+                    var t = (chip.getAttribute('data-value') || '').toLowerCase();
+                    chip.hidden = !!q && t.indexOf(q) === -1;
+                });
+            };
+        }
+        Array.prototype.forEach.call(box.querySelectorAll('.value-chip'), function (chip) {
+            chip.addEventListener('click', function () {
+                var v = chip.getAttribute('data-value');
+                state.valueFilter.field = field;
+                var idx = state.valueFilter.values.indexOf(v);
+                if (idx === -1) state.valueFilter.values.push(v);
+                else state.valueFilter.values.splice(idx, 1);
+                chip.classList.toggle('on', state.valueFilter.values.indexOf(v) !== -1);
+                var clr = $('clearValueFilter');
+                if (clr) clr.hidden = !state.valueFilter.values.length;
+                refresh();
+            });
+        });
+        var clr = $('clearValueFilter');
+        if (clr) {
+            clr.hidden = !state.valueFilter.values.length;
+            clr.onclick = function () {
+                state.valueFilter.values = [];
+                buildValueFilter();
+                refresh();
+            };
+        }
     }
 
     function buildCohortToggles() {
@@ -806,7 +1163,13 @@
 
     function buildRailMeta() {
         var m = state.usedFallbackLimit ? ('Fallback limit ' + fmtInt(state.fallbackLimit) + ' applied.') : 'Limits from credit file.';
-        $('railMeta').textContent = state.users.length + ' users loaded. ' + m;
+        var txt = state.users.length + ' users loaded. ' + m;
+        var js = state.joinStats;
+        if (js && js.total > 0) {
+            txt += ' | ' + js.matched + ' of ' + js.total + ' users matched an Entra record (' + fmtPct(js.matched / js.total) + ')';
+            if (js.matched === 0) txt += '. Org attributes are unavailable, so slicing is limited - load the Entra export to enable it.';
+        }
+        $('railMeta').textContent = txt;
     }
 
     function refresh() {
@@ -814,7 +1177,9 @@
         renderView(state.activeTab);
         buildRailMeta();
         var org = state.computed.org;
-        $('topbarSub').textContent = fmtInt(org.userCount) + ' users  |  ' + fmtMoney(org.chargeback) + ' chargeback  |  sliced by ' + state.sliceBy;
+        var sub = fmtInt(org.userCount) + ' users  |  ' + fmtMoney(org.chargeback) + ' chargeback  |  sliced by ' + state.sliceBy;
+        if (state.valueFilter.values.length) sub += ', filtered to ' + state.valueFilter.values.length + ' value(s)';
+        $('topbarSub').textContent = sub;
     }
 
     function showDashboard() {
@@ -824,6 +1189,7 @@
             state.sliceBy = state.dims.length ? state.dims[0].key : 'Department';
         }
         COHORT_ORDER.forEach(function (c) { if (state.cohortFilter[c] === undefined) state.cohortFilter[c] = true; });
+        state.valueFilter = { field: dimField(state.sliceBy), values: [] };
         $('landing').hidden = true;
         $('dashboard').hidden = false;
         $('demoBanner').hidden = !state.demoActive;
@@ -831,6 +1197,7 @@
         $('rateWhatIf').value = state.rate;
         buildTabs();
         buildSliceBy();
+        buildValueFilter();
         buildCohortToggles();
         state.activeTab = 'exec';
         refresh();
@@ -903,6 +1270,7 @@
     function reset() {
         state.pending = { entra: null, credits: null };
         state.users = []; state.computed = null; state.demoActive = false;
+        state.valueFilter = { field: null, values: [] };
         $('dashboard').hidden = true;
         $('landing').hidden = false;
         $('statusEntra').textContent = 'No file selected';

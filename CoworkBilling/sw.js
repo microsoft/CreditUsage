@@ -1,5 +1,5 @@
 /* sw.js - cache-first, versioned service worker for offline use. */
-var CACHE_NAME = 'cowork-credits-v1';
+var CACHE_NAME = 'cowork-credits-v1.1';
 var PRECACHE = [
     './',
     './index.html',
