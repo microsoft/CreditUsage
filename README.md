@@ -19,7 +19,7 @@
 
 <br>
 
-**[Dashboard Preview ↓](#dashboard-preview)** &nbsp;·&nbsp; **[Instructions ↓](#instructions)** &nbsp;·&nbsp; **[Related Resources ↓](#related-resources)** &nbsp;·&nbsp; **[Email your Admin ↓](#email-your-admin)** &nbsp;·&nbsp; **[Live Web App ↗](https://jordankingisalive.github.io/CoworkCredits/)**
+**[Dashboard Preview ↓](#dashboard-preview)** &nbsp;·&nbsp; **[Instructions ↓](#instructions)** &nbsp;·&nbsp; **[Related Resources ↓](#related-resources)** &nbsp;·&nbsp; **[Email your Admin ↓](#email-your-admin)** &nbsp;·&nbsp; **[Live Web Apps ↗](https://microsoft.github.io/Analytics-Hub/cowork-billing/)**
 
 <br>
 
