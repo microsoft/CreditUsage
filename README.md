@@ -154,16 +154,16 @@ This report is powered by **two CSV exports** that join on the user principal na
    - Confirm the Executive Overview visuals populate (total credits used, credit limit, utilization %, chargeback $, users over limit) and that all 8 report pages render.
    - The per-user monthly credit limit comes from Export 1, so there is no manual budget input to set.
 
-### The eight report pages
+### The report pages
 
-1. **Executive Overview** — org KPIs (total credits used, credit limit, utilization %, chargeback $ at $0.01 per credit, users over limit) plus headline visuals.
-2. **Department Chargeback** — per-department rollup: credits used vs limit, utilization %, over-limit credits and $, chargeback $, and budget status.
-3. **Cost Center & Business Unit** — the same rollups by cost center and by business unit.
-4. **Credit Optimization** — a current-month reallocation view: under-utilized vs over-limit credits and $ by department (not a forecast).
-5. **Standout Individuals** — top users by standout ratio (their usage vs their department's average) for recognition or investigation.
-6. **Usage Cohorts** — a six-tier percentile cohort table by monthly credits used: <P50 Light/occasional, P50–P75 Regular collaborator, P75–P90 Highly engaged, P90–P95 Cowork-native, P95–P99 Power delegator, P99+ Frontier.
-7. **User Detail** — a per-user table (limit, used, % used, sessions, chargeback $, cohort, org attributes).
-8. **Glossary** — definitions plus data and honesty notes.
+1. **Consumption** - org KPIs (total credits used, credit limit, utilization %, chargeback $ at $0.01 per credit, users over limit) plus headline visuals.
+2. **Chargeback** - per-department rollup (credits used vs limit, utilization %, over-limit credits and $, chargeback $, budget status), plus cost center and business unit rollups.
+3. **Optimization & Limits** - a utilization-band chart (Under 50% through Over 100%) and an all-user watchlist sorted by % of limit to spot users approaching or over their allowance, alongside allowance-adjustment candidates.
+4. **Forecast (Credits)** - projected credits and cost over a configurable horizon, with usage / adoption growth and prepaid-commitment scenarios.
+5. **Billing Models** - the same consumption priced three ways per department: PAYGO (per credit), Prepaid (credit pack at a prepaid rate), and Hybrid (prepaid allowance plus PAYGO overage), with an adjustable prepaid-rate slider and a cheapest-model flag.
+6. **Prepaid Allocation** - enter your procured prepaid credit pool and see, per department, how it is allocated (priority fill), what is covered, and where the pay-as-you-go gap falls; pool-coverage KPIs and a covered-vs-gap chart.
+7. **Glossary** - definitions plus data and honesty notes.
+8. **Appendix: FOCUS Cost View** - the chargeback expressed in FinOps Open Cost & Usage Specification (FOCUS) columns (hidden in view mode).
 
 ---
 
@@ -322,6 +322,33 @@ We want to hear your feedback and suggestions. Please reach out to jordanking@mi
 - 🔄 Check back regularly for new features and improvements
 
 </details>
+
+---
+
+<a id="changelog"></a>
+
+## Changelog
+
+All notable changes to the Cowork Credit Chargeback template and report.
+
+### 2026-07-23
+
+**Added**
+- **Billing Models page** - compare the same monthly consumption under PAYGO, Prepaid (credit-pack), and Hybrid pricing per department, with an adjustable prepaid-rate slider and a cheapest-model flag.
+- **Prepaid Allocation page** - enter a procured prepaid credit pool (e.g. 2M credits) and see, per department, how it is allocated (priority fill), what is covered, and where the pay-as-you-go (PAYGO) gap falls; pool-coverage KPIs and a covered-vs-gap chart.
+- **Optimization & Limits** (renamed from "Optimization") - a utilization-band chart (Under 50% through Over 100%) and an all-user watchlist sorted by % of limit, to surface users approaching or over their allowance.
+
+**Changed**
+- Unified the page banner (white header) across every page for a consistent look.
+- Softened the report color palette to a muted / pastel scheme.
+
+**Model**
+- New what-if parameters: **Prepaid Rate per Credit** and **Prepaid Credits Procured**.
+- New measures for the billing-model comparison and prepaid-pool allocation (fair-share and priority-fill), plus **Utilization Band** columns.
+
+### 2026-07-16 - Baseline
+
+- Initial Cowork Credit Chargeback template: two-CSV Power Query load (Copilot consumption + Microsoft Entra directory), RLS-ready model, executive / department / cost-center chargeback, credit optimization, forecast, glossary, and a FOCUS cost appendix.
 
 ---
 
