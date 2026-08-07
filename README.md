@@ -36,14 +36,6 @@
 
   <img src="images/dashboard-preview.gif" alt="Credit Usage & Chargebacks Dashboard Preview" width="100%" />
 
-  <br><br>
-
-  <b>Prepaid Allocation</b>
-
-  <br>
-
-  <img src="images/prepaid-allocation.png" alt="Prepaid Allocation tab — prepaid pool allocation by department, covered vs PAYGO gap, with pool-coverage KPIs and allocation-model controls" width="100%" />
-
 </details>
 
 ---
@@ -169,7 +161,7 @@ This report is powered by **two CSV exports** that join on the user principal na
 3. **Optimization & Limits** - a utilization-band chart (Under 50% through Over 100%) and an all-user watchlist sorted by % of limit to spot users approaching or over their allowance, alongside allowance-adjustment candidates.
 4. **Forecast (Credits)** - projected credits and cost over a configurable horizon, with usage / adoption growth and prepaid-commitment scenarios.
 5. **Billing Models** - the same consumption priced three ways per department: PAYGO (per credit), Prepaid (credit pack at a prepaid rate), and Hybrid (prepaid allowance plus PAYGO overage), with an adjustable prepaid-rate slider and a cheapest-model flag.
-6. **Prepaid Allocation** - enter your procured prepaid credit pool and choose an **allocation model** - **Priority** (fills the highest-usage departments first), **Within limit** (covers each user up to their allowance, with overage billed PAYGO), or **Even split** (divides the pool equally across departments) - then see, per department, what the pool covers and where the pay-as-you-go gap falls (gap = usage the pool does not cover, billed PAYGO); with pool-coverage KPIs (prepaid pool, allocation coverage %, PAYGO gap) and a covered-vs-gap chart.
+6. **Prepaid Allocation** - set your three inputs (rate per credit, prepaid rate, prepaid credits procured), then choose a **prepaid credits allocation model** - **Prorated based on credits used**, **Prorated based on employee count**, or **Limited to budgeted allowances** - to split the pool across departments, where each department pays for what the pool covers plus any overage (billed PAYGO). Pool-coverage KPIs (total usage, prepaid pool, usage covered by prepaid pool %, not covered by prepaid credits, total cost, estimated overage) sit above a covered-vs-gap chart and a per-department table (users, credits used, coverage, covered by prepaid, overage PAYGO, total charge).
 7. **Glossary** - definitions plus data and honesty notes.
 8. **Appendix: FOCUS Cost View** - the chargeback expressed in FinOps Open Cost & Usage Specification (FOCUS) columns (hidden in view mode).
 
