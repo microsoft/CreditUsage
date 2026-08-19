@@ -151,19 +151,17 @@ This report is powered by **two CSV exports** that join on the user principal na
 
 4. **Refresh and verify**
    - Click **Refresh**.
-   - Confirm the Executive Overview visuals populate (total credits used, credit limit, utilization %, chargeback $, users over limit) and that all 8 report pages render.
+   - Confirm the Consumption visuals populate (total credits used, total credit allowance, utilization %, top user by credits) and that all 6 report pages render.
    - The per-user monthly credit limit comes from Export 1, so there is no manual budget input to set.
 
 ### The report pages
 
-1. **Consumption** - org KPIs (total credits used, credit limit, utilization %, chargeback $ at $0.01 per credit, users over limit) plus headline visuals.
-2. **Chargeback** - per-department rollup (credits used vs limit, utilization %, over-limit credits and $, chargeback $, budget status), plus cost center and business unit rollups.
-3. **Optimization & Limits** - a utilization-band chart (Under 50% through Over 100%) and an all-user watchlist sorted by % of limit to spot users approaching or over their allowance, alongside allowance-adjustment candidates.
-4. **Forecast (Credits)** - projected credits and cost over a configurable horizon, with usage / adoption growth and prepaid-commitment scenarios.
-5. **Billing Models** - the same consumption priced three ways per department: PAYGO (per credit), Prepaid (credit pack at a prepaid rate), and Hybrid (prepaid allowance plus PAYGO overage), with an adjustable prepaid-rate slider and a cheapest-model flag.
-6. **Prepaid Allocation** - set your three inputs (rate per credit, prepaid rate, prepaid credits procured), then choose a **prepaid credits allocation model** - **Prorated based on credits used**, **Prorated based on employee count**, or **Limited to budgeted allowances** - to split the pool across departments, where each department pays for what the pool covers plus any overage (billed PAYGO). Pool-coverage KPIs (total usage, prepaid pool, usage covered by prepaid pool %, not covered by prepaid credits, total cost, estimated overage) sit above a covered-vs-gap chart and a per-department table (users, credits used, coverage, covered by prepaid, overage PAYGO, total charge).
-7. **Glossary** - definitions plus data and honesty notes.
-8. **Appendix: FOCUS Cost View** - the chargeback expressed in FinOps Open Cost & Usage Specification (FOCUS) columns (hidden in view mode).
+1. **Consumption** - org KPIs (total credits used, total credit allowance, utilization %, top user by credits) over a credits-by-group table and a used-vs-allowance chart.
+2. **Chargeback (PayGo)** - the per-department PayGo view: users over limit, % users over limit, credits over limit, and the resulting chargeback, ranked in a chargeback-by-group chart. Chargeback is billed on the consumption a group runs above its allowance (PayGo overage).
+3. **Prepaid Allocation** - set your three inputs (rate per credit, prepaid rate, prepaid credits procured), then choose a **prepaid credits allocation model** - **Prorated based on credits used**, **Prorated based on employee count**, or **Limited to budgeted allowances** - to split the pool across departments, where each department pays for what the pool covers plus any overage (billed PAYGO). Pool-coverage KPIs (total usage, prepaid pool, usage covered by prepaid pool %, not covered by prepaid credits, total cost, estimated overage) sit above a covered-vs-gap chart and a per-department table (users, credits used, covered by prepaid, overage PAYGO, total charge).
+4. **Optimization** - a utilization-band chart (Under 50% through Over 100%), an all-user watchlist sorted by % of limit, and a decrease-allowance table of top unused credits to spot allowance-adjustment candidates.
+5. **Forecast (Credits)** - projected monthly credits over a configurable horizon (usage growth, user growth, time period, monthly prepaid), with current-vs-projected credits and utilization-vs-capacity.
+6. **Glossary** - definitions plus data and honesty notes.
 
 ---
 
@@ -177,7 +175,7 @@ This report is powered by **two CSV exports** that join on the user principal na
 **Checklist for success:**
 - No errors on load
 - Fields pane includes the expected tables (`CoworkBilling`, `Org`)
-- Executive Overview visuals populate (not all blank)
+- Consumption visuals populate (not all blank)
 
 **Common Mistakes & Fixes**
 
@@ -330,6 +328,15 @@ We want to hear your feedback and suggestions. Please reach out to jordanking@mi
 ## Changelog
 
 All notable changes to the Cowork Credit Chargeback template and report.
+
+### 2026-08-18
+
+**Changed**
+- **Chargeback is now billed on consumption above allowance (PayGo overage).** Under the 22 Jul 2026 Cowork spending-policy change, per-user spending limits are soft - the task still completes and the excess is not billed - so the Chargeback page now reflects PayGo overage rather than a figure that is never invoiced.
+- **Prepaid allocation "Limited to budgeted allowances" now respects the pool.** The model previously ignored the prepaid pool and could report coverage above the pool size; total coverage is now capped at the procured pool.
+
+**Removed**
+- **Billing Models page** and **Appendix: FOCUS Cost View** - no longer part of the report.
 
 ### 2026-07-23
 
