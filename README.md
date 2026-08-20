@@ -208,7 +208,7 @@ This report is powered by **two CSV exports** that join on the user principal na
 
 Use the included guide to frame your narrative and drive action:
 
-- **Storyboard presentation template:** `Chargebacks Interpretation Guide.pptx`
+- **Report reading guide:** [Cowork Chargeback - Report Reading Guide.pptx](./Cowork%20Chargeback%20-%20Report%20Reading%20Guide.pptx)
 
 Use the guide to:
 - Create a leadership-ready credit usage & chargeback review
