@@ -19,7 +19,7 @@
 
 <br>
 
-**[Dashboard Preview ↓](#dashboard-preview)** &nbsp;·&nbsp; **[Instructions ↓](#instructions)** &nbsp;·&nbsp; **[Related Resources ↓](#related-resources)** &nbsp;·&nbsp; **[Email your Admin ↓](#email-your-admin)** &nbsp;·&nbsp; **[Live Web Apps ↗](https://microsoft.github.io/Analytics-Hub/cowork-billing/)**
+**[Dashboard Preview ↓](#dashboard-preview)** &nbsp;·&nbsp; **[Video Walkthrough ↓](#video-walkthrough)** &nbsp;·&nbsp; **[Instructions ↓](#instructions)** &nbsp;·&nbsp; **[Related Resources ↓](#related-resources)** &nbsp;·&nbsp; **[Email your Admin ↓](#email-your-admin)** &nbsp;·&nbsp; **[Live Web Apps ↗](https://microsoft.github.io/Analytics-Hub/cowork-billing/)**
 
 <br>
 
@@ -35,6 +35,23 @@
   <br>
 
   <img src="images/dashboard-preview.gif" alt="Credit Usage & Chargebacks Dashboard Preview" width="100%" />
+
+</details>
+
+---
+
+<a id="video-walkthrough"></a>
+
+<details open>
+  <summary>🎬 <b>Video Walkthrough</b> <em>(2m 15s)</em></summary>
+
+  <br>
+
+  A guided, client-ready tour of the report — consumption, chargeback, cowork prepaid allocation, optimization, and forecast.
+
+  <video src="https://github.com/microsoft/CreditUsage/raw/main/media/CreditUsage-Demo.mp4" controls width="100%"></video>
+
+  ▶️ **[Watch the walkthrough](https://github.com/microsoft/CreditUsage/raw/main/media/CreditUsage-Demo.mp4)** (if the player above doesn't load inline)
 
 </details>
 
