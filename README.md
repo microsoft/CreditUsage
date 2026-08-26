@@ -42,18 +42,13 @@
 
 <a id="video-walkthrough"></a>
 
-<details open>
-  <summary>🎬 <b>Video Walkthrough</b> <em>(2m 15s)</em></summary>
+## 🎬 Video Walkthrough
 
-  <br>
+Plays here in the page — no download.
 
-  A guided, client-ready tour of the report — consumption, chargeback, cowork prepaid allocation, optimization, and forecast.
+**A guided, client-ready tour of the report** — consumption, chargeback, cowork prepaid allocation, optimization, and forecast. *(2m 15s)*
 
-  <video src="https://github.com/microsoft/CreditUsage/raw/main/media/CreditUsage-Demo.mp4" controls width="100%"></video>
-
-  ▶️ **[Watch the walkthrough](https://github.com/microsoft/CreditUsage/raw/main/media/CreditUsage-Demo.mp4)** (if the player above doesn't load inline)
-
-</details>
+https://github.com/user-attachments/assets/42d37fdf-a351-47ed-be62-444d59948bab
 
 ---
 
