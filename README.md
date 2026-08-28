@@ -46,7 +46,7 @@
 
 Plays here in the page — no download.
 
-**A guided, client-ready tour of the report** — consumption, chargeback, cowork prepaid allocation, optimization, and forecast. *(2m 15s)*
+**A guided tour of the report** — consumption, chargeback, Cowork prepaid allocation, optimization, and forecast. *(2m 15s)*
 
 https://github.com/user-attachments/assets/42d37fdf-a351-47ed-be62-444d59948bab
 
