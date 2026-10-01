@@ -59,20 +59,20 @@ https://github.com/user-attachments/assets/42d37fdf-a351-47ed-be62-444d59948bab
 
 Copilot credits are a finite, paid resource. Tracking how they are consumed turns a flat invoice into an accountable, department-level picture. Monitoring credit usage helps you:
 - Attribute consumption to the right departments and cost centers
-- Spot users trending over their monthly credit limit before overruns
+- Spot the heaviest credit consumers and usage-intensity cohorts
 - Recognize standout individuals and understand usage cohorts
-- Rebalance credit allocation from under-utilized to over-limit teams
+- Compare consumption across teams to inform credit planning
 
 <br>
 
 **Consumption profile:**
-How many credits is the organization consuming against its credit limit? What is the utilization %? How does usage break down by sessions and % used per user?
+How many credits is the organization consuming? How does usage break down by group, by sessions, and by usage intensity per user?
 
 **Department attribution:**
 Which departments and cost centers are driving consumption? How do credits roll up for chargeback at $0.01 per credit?
 
-**Over-limit & budget status:**
-Which teams are nearing or exceeding their monthly credit limit? Where is utilization crossing 100%, and what is the over-limit chargeback?
+**Usage intensity:**
+Which teams and people consume the most, and how does consumption concentrate across usage-intensity cohorts?
 
 **Cohorts & standouts:**
 Which usage cohort does each user fall into? Who are the standout individuals — high relative to their department average — worth recognizing or investigating?
@@ -158,22 +158,59 @@ This report is powered by **two CSV exports** that join on the user principal na
    - Save as CSV with the exact column names listed above.
 
 3. **Open the template in Power BI Desktop**
-   - Open the `.pbit` template file.
+   - Open the `Cowork Chargeback.pbit` template file (CSV variant).
    - When prompted for parameters, set **`CreditCsvPath`** to the credit consumption CSV and **`EntraCsvPath`** to the Microsoft Entra directory CSV.
+   - **Prefer live, self-refreshing data?** Use the **[Direct Query variant](#direct-query-variant)** (`Cowork Chargeback - Direct Query.pbit`), which connects straight to Viva Insights and supports scheduled refresh for automation.
 
 4. **Refresh and verify**
    - Click **Refresh**.
-   - Confirm the Consumption visuals populate (total credits used, total credit allowance, utilization %, top user by credits) and that all 6 report pages render.
+   - Confirm the Consumption visuals populate (total credits used, top user by credits) and that all 6 report pages render.
    - The per-user monthly credit limit comes from Export 1, so there is no manual budget input to set.
 
 ### The report pages
 
-1. **Consumption** - org KPIs (total credits used, total credit allowance, utilization %, top user by credits) over a credits-by-group table and a used-vs-allowance chart.
-2. **Chargeback (PayGo)** - the per-department PayGo view: users over limit, % users over limit, credits over limit, and the resulting chargeback, ranked in a chargeback-by-group chart. Chargeback is billed on the consumption a group runs above its allowance (PayGo overage).
+1. **Consumption** - org KPIs (total credits used, top user by credits) over a credits-by-group table and a credits-by-group chart.
+2. **Chargeback (PayGo)** - the per-department chargeback view: total credits used and the resulting chargeback ($), ranked in a chargeback-by-group chart. Chargeback bills the credits a group consumed, priced at the configured rate per credit.
 3. **Prepaid Allocation** - set your three inputs (rate per credit, prepaid rate, prepaid credits procured), then choose a **prepaid credits allocation model** - **Prorated based on credits used**, **Prorated based on employee count**, or **Limited to budgeted allowances** - to split the pool across departments, where each department pays for what the pool covers plus any overage (billed PAYGO). Pool-coverage KPIs (total usage, prepaid pool, usage covered by prepaid pool %, not covered by prepaid credits, total cost, estimated overage) sit above a covered-vs-gap chart and a per-department table (users, credits used, covered by prepaid, overage PAYGO, total charge).
-4. **Optimization** - a utilization-band chart (Under 50% through Over 100%), an all-user watchlist sorted by % of limit, and a decrease-allowance table of top unused credits to spot allowance-adjustment candidates.
+4. **Optimization** - a users-by-usage-intensity chart, a top-credit-consumers-by-user table, and a top-consumers-by-group breakdown to see where consumption concentrates.
 5. **Forecast (Credits)** - projected monthly credits over a configurable horizon (usage growth, user growth, time period, monthly prepaid), with current-vs-projected credits and utilization-vs-capacity.
 6. **Glossary** - definitions plus data and honesty notes.
+
+---
+
+<a id="direct-query-variant"></a>
+
+<details>
+<summary><strong>⚡ Direct Query variant — live from Viva Insights (self-refreshing)</strong></summary>
+
+<br>
+
+Alongside the CSV template, the repo ships a **Direct Query variant**, `Cowork Chargeback - Direct Query.pbit`, that connects **live to Viva Insights** instead of reading CSV exports. There are no files to export, overwrite, or re-point: once published to the Power BI Service it supports **scheduled refresh**, so the report keeps itself current with no manual step. This is the path to use when you want **automation**.
+
+**What it connects to**
+
+It reads a saved custom **Consumption** query from the **Viva Insights Advanced Insights** portal through the official Viva Insights connector. Spending policy, policy limits, and org attributes travel on the rows when the analyst ticks **Select spending policy and employee attributes** when building the query, so a separate Entra export is not required on this path.
+
+**Before you start**
+
+- **Viva Insights Advanced Insights** access (an analyst builds and saves the query).
+- A saved custom **Consumption** query in the Advanced Insights portal. Note its **Partition** and **Query** identifiers (both shown in the portal).
+- **Power BI Desktop** (May 2024 or later).
+
+**Stand it up**
+
+1. Open **`Cowork Chargeback - Direct Query.pbit`** in Power BI Desktop.
+2. When prompted, fill the two required parameters:
+   - **`VivaPartitionId`** — the **Partition:** GUID shown in the Advanced Insights portal.
+   - **`VivaQueryId`** — the identifier of your saved **Consumption** query.
+   - Optional: **`BillingPeriodWeeks`** (default `4`) sets how many trailing weeks roll into the current billing window.
+3. When prompted, **sign in to the Viva Insights connector** with your organizational account.
+4. Click **Load**, then **Refresh**. Every page populates from live tenant data.
+5. **Publish** to a Power BI workspace and set a **scheduled refresh** (dataset settings) for fully automated updates.
+
+> **Heads-up:** re-saving the query in the Advanced Insights portal issues a **new Query identifier**. If you re-save, update the `VivaQueryId` parameter so the refresh keeps resolving.
+
+</details>
 
 ---
 
@@ -235,9 +272,10 @@ Use the guide to:
 
 <br>
 
-- For CSV Import: re-export the two CSVs on your cadence (e.g. monthly), overwrite the files, and refresh the report.
+- For **CSV Import** (`Cowork Chargeback.pbit`): re-export the two CSVs on your cadence (e.g. monthly), overwrite the files, and refresh the report.
+- For the **Direct Query variant** (`Cowork Chargeback - Direct Query.pbit`): publish to the Power BI Service and set a **scheduled refresh**. The report then updates on its own, no re-export or re-point needed. This is the recommended path for ongoing, automated monitoring.
 - Verify each period that a fresh window of credit data appears.
-- Track utilization and over-limit users regularly so owners can act before overruns.
+- Track consumption, department attribution, and usage intensity regularly so owners can act.
 
 </details>
 
@@ -340,6 +378,14 @@ We want to hear your feedback and suggestions. Please reach out to jordanking@mi
 ## Changelog
 
 All notable changes to the Cowork Credit Chargeback template and report.
+
+### 2026-10-01
+
+**Added**
+- **Direct Query variant** (`Cowork Chargeback - Direct Query.pbit`) - connects live to Viva Insights through the Advanced Insights connector instead of CSV exports. Prompts for `VivaPartitionId` and `VivaQueryId` on open and, once published, supports **scheduled refresh** for automated updates. See [Direct Query variant](#direct-query-variant).
+
+**Changed**
+- **Removed the per-user limit framing.** The per-user spending limit is a soft, unbilled cap, so utilization and allowance against it are not real billed figures. Consumption KPIs drop Total Credit Allowance and Utilization % and the allowance reference line; the Chargeback page drops the % Users Over Limit tile and line; the Optimization page is repurposed to usage-intensity and top-consumer views. Chargeback bills the credits a group consumed at the configured rate per credit.
 
 ### 2026-08-18
 
