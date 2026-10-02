@@ -379,6 +379,16 @@ We want to hear your feedback and suggestions. Please reach out to jordanking@mi
 
 All notable changes to the Cowork Credit Chargeback template and report.
 
+### 2026-10-02
+
+**Direct Query variant**
+- **New "Prepaid" page** - credits used, selectable prepaid rate, a prepaid credits procured slider (now up to 200M), a per-group prepaid chargeback table and chart, plus **savings vs the $0.01 PayGo rate**.
+- **Fixed the prepaid allocation math.** "Prorated based on credits used" / "by employee count" now cover each visible row in proportion to its own share of the selected total, correct at any grain (organization, department, user, grand total). Renamed the allocation table's "Overage (PAYGO)" column to "PayGo".
+- **Removed "Top User (Credits)"** from every page.
+- **Replaced "% of User Limit"** in the Consumption matrix with a contextual average - average per active user at the group/total level, daily average credits at the person level - and added average per active user to the Consumption KPI card.
+- **Removed Usage Intensity** slicers from the PayGo page.
+- `BillingPeriodWeeks` and `DataFolder` are no longer prompted on open (internal); only `VivaPartitionId` and `VivaQueryId` are requested.
+
 ### 2026-10-01
 
 **Added**
