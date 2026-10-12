@@ -93,7 +93,18 @@ Which usage cohort does each user fall into? Who are the standout individuals �
 
 <br>
 
-### Step 1. Gather the two data exports (Required for All Setups)
+### Choose your setup path
+
+This report has two supported variants. Use **CSV Import** for Microsoft 365 admin center (MAC) export workflows, the fastest path from admin exports to a Power BI file. Use **Viva Direct Query** when you have Viva Insights Advanced Insights access and want the report to keep refreshing from the saved Consumption query.
+
+| Variant | Use it when | Data source | Refresh model | Template |
+|---------|-------------|-------------|---------------|----------|
+| **CSV Import** | You want to start quickly, test with demo data, or work from MAC/monthly admin exports | Two CSV exports: Copilot credit consumption and Microsoft Entra org directory | Manual refresh after re-exporting files | `Cowork Chargeback - CSV.pbit` |
+| **Viva Direct Query** | You want live, scheduled refresh without file handling | Saved Viva Insights Advanced Insights Consumption query | Scheduled refresh in the Power BI Service | `Cowork Chargeback - Direct Query.pbit` |
+
+### CSV Import variant
+
+#### Step 1. Gather the two data exports
 
 This report is powered by **two CSV exports** that join on the user principal name. No database connection is required — the report reads both files through Power Query parameters.
 
@@ -145,7 +156,7 @@ This report is powered by **two CSV exports** that join on the user principal na
 
 </details>
 
-### Quick Reference
+#### CSV Import quick reference
 
 1. **Produce the credit consumption export**
    - In the **Microsoft 365 Admin Center**, go to **Copilot → Cost management → Consumption** tab and click **Export CSV**.
@@ -158,7 +169,7 @@ This report is powered by **two CSV exports** that join on the user principal na
    - Save as CSV with the exact column names listed above.
 
 3. **Open the template in Power BI Desktop**
-   - Open the `Cowork Chargeback.pbit` template file (CSV variant).
+   - Open the `Cowork Chargeback - CSV.pbit` template file.
    - When prompted for parameters, set **`CreditCsvPath`** to the credit consumption CSV and **`EntraCsvPath`** to the Microsoft Entra directory CSV.
    - **Prefer live, self-refreshing data?** Use the **[Direct Query variant](#direct-query-variant)** (`Cowork Chargeback - Direct Query.pbit`), which connects straight to Viva Insights and supports scheduled refresh for automation.
 
@@ -166,6 +177,15 @@ This report is powered by **two CSV exports** that join on the user principal na
    - Click **Refresh**.
    - Confirm the Consumption visuals populate (total credits used, top user by credits) and that all 6 report pages render.
    - The per-user monthly credit limit comes from Export 1, so there is no manual budget input to set.
+
+#### Demo data quick reference
+
+Want to see all six pages before you collect tenant data?
+
+1. Open `Cowork Chargeback - CSV.pbit` in Power BI Desktop.
+2. Set `CreditCsvPath` to `demo data\cowork_billing_synthetic.csv`.
+3. Set `EntraCsvPath` to `demo data\entra_org.csv`.
+4. Click **Load**, then explore the Consumption, Chargeback (PayGo), Prepaid Allocation, Optimization, Forecast, and Glossary pages.
 
 ### The report pages
 
@@ -203,12 +223,26 @@ It reads a saved custom **Consumption** query from the **Viva Insights Advanced 
 2. When prompted, fill the two required parameters:
    - **`VivaPartitionId`** — the **Partition:** GUID shown in the Advanced Insights portal.
    - **`VivaQueryId`** — the identifier of your saved **Consumption** query.
-   - Optional: **`BillingPeriodWeeks`** (default `4`) sets how many trailing weeks roll into the current billing window.
 3. When prompted, **sign in to the Viva Insights connector** with your organizational account.
 4. Click **Load**, then **Refresh**. Every page populates from live tenant data.
 5. **Publish** to a Power BI workspace and set a **scheduled refresh** (dataset settings) for fully automated updates.
 
 > **Heads-up:** re-saving the query in the Advanced Insights portal issues a **new Query identifier**. If you re-save, update the `VivaQueryId` parameter so the refresh keeps resolving.
+
+**Add your own slice or rollup**
+
+Both variants can carry custom people attributes into the model.
+
+- **CSV Import:** add the custom column to the Microsoft Entra org directory CSV, keyed by `userPrincipalName`.
+- **Viva Direct Query:** include the custom employee attribute in the Viva Insights Consumption query.
+
+After refresh, the column appears on the `Org` table. To expose it in the report's **Slice By** selector, select the **Slice By** table and add one line before the closing `}` in the formula bar:
+
+```DAX
+("Custom Division", NAMEOF('Org'[CustomDivision]), 11)
+```
+
+Use the display label, the real `Org` column, and the next sort number.
 
 </details>
 
@@ -236,6 +270,8 @@ It reads a saved custom **Consumption** query from the **Viva Insights Advanced 
 | Utilization or over-limit looks wrong | `Monthly credit limit` missing from the credit export | Re-export Export 1 with the monthly credit limit column |
 | Load error | CSV open in Excel | Close the file and retry |
 | Wrong file loaded | Parameter points to the wrong path | Re-check `CreditCsvPath` and `EntraCsvPath` |
+| Direct Query refresh fails | Viva query was re-saved and received a new query identifier | Update `VivaQueryId` with the current **Query** identifier |
+| Direct Query returns blank org attributes | Employee attributes were not selected in the Viva Consumption query | Re-run the query with spending policy and employee attributes selected |
 
 </details>
 
@@ -246,7 +282,8 @@ It reads a saved custom **Consumption** query from the **Viva Insights Advanced 
 
 - Save your PBIX file after setup.
 - Publish to a Power BI workspace: **File → Publish → Publish to Power BI**.
-- For CSV Import, note that refreshes are manual — re-export and re-point the file to update.
+- For CSV Import, refreshes are manual: re-export the files, keep or update the same parameter paths, then refresh.
+- For Viva Direct Query, configure scheduled refresh on the semantic model after publishing.
 
 </details>
 
@@ -272,7 +309,7 @@ Use the guide to:
 
 <br>
 
-- For **CSV Import** (`Cowork Chargeback.pbit`): re-export the two CSVs on your cadence (e.g. monthly), overwrite the files, and refresh the report.
+- For **CSV Import** (`Cowork Chargeback - CSV.pbit`): re-export the two CSVs on your cadence (e.g. monthly), overwrite the files, and refresh the report.
 - For the **Direct Query variant** (`Cowork Chargeback - Direct Query.pbit`): publish to the Power BI Service and set a **scheduled refresh**. The report then updates on its own, no re-export or re-point needed. This is the recommended path for ongoing, automated monitoring.
 - Verify each period that a fresh window of credit data appears.
 - Track consumption, department attribution, and usage intensity regularly so owners can act.
@@ -343,7 +380,7 @@ Publish as normal: **File → Publish → Publish to Power BI** and select your 
 
 <br>
 
-The report's two source paths are exposed as Power Query parameters — `CreditCsvPath` and `EntraCsvPath` — so swapping in a fresh extract is a parameter change and a refresh, with no model edits. Department attribution, over-limit tracking, the usage cohorts, and standout individuals all derive from the same star schema: a single `CoworkBilling` fact (27 measures) joined many-to-one to the `Org` directory (sourced from Microsoft Entra) on user principal name, alongside an `Assumptions` table holding the sole money knob (`RatePerCredit`, $0.01 per credit) and a `SecurityFilter` table for RLS.
+The CSV Import variant exposes two source paths as Power Query parameters: `CreditCsvPath` and `EntraCsvPath`. Swapping in a fresh extract is a parameter change and a refresh, with no model edits. The Viva Direct Query variant replaces those file parameters with `VivaPartitionId` and `VivaQueryId`, so the same model can refresh from a saved Viva Insights Consumption query. Department attribution, chargeback tracking, the usage cohorts, and standout individuals all derive from the same star schema: a single `CoworkBilling` fact joined many-to-one to the `Org` directory on user principal name, alongside an `Assumptions` table holding the money knob (`RatePerCredit`, $0.01 per credit) and a `SecurityFilter` table for RLS.
 
 </details>
 
