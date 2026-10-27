@@ -43,6 +43,9 @@ All reports and guides can be found on the [Analytics Hub](https://microsoft.git
 
 Plays here in the page — no download.
 
+**YouTube overview** *(2m 15s)*  
+https://youtu.be/msDBEUbtGlw
+
 **A guided tour of the report** — consumption, chargeback, Cowork prepaid allocation, optimization, and forecast. *(2m 15s)*
 
 https://github.com/user-attachments/assets/42d37fdf-a351-47ed-be62-444d59948bab
